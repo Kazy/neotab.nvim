@@ -100,6 +100,29 @@ function utils.valid_pair(info, line, l, r)
     return false
 end
 
+function utils.valid_pair_rev(info, line, l, r)
+    if info.open == info.close and line:sub(l, r):find(info.open, 1, true) then
+        return true
+    end
+
+    local c = 1
+    for i = l, r do
+        local char = line:sub(i, i)
+
+        if info.open == char then
+            c = c - 1
+        elseif info.close == char then
+            c = c + 1
+        end
+
+        if c == 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
 ---@alias ntab.pos { cursor: integer, char: integer }
 
 ---@param info ntab.pair
@@ -187,6 +210,98 @@ function utils.find_next(pair, line, col, behavior) --
             prev = prev,
             next = next,
             pos = math.max(col + 1, i),
+        }
+    end
+end
+
+---@param info ntab.pair
+---@param line string
+---@param col integer
+---
+---@return integer | nil
+function utils.find_prev_nested(info, line, col)
+    local char = line:sub(col, col)
+
+    if info.open == info.close or info.open == char then
+        for i = col - 1, 1, -1 do
+            char = line:sub(i, i)
+            local char_info = utils.get_pair(char)
+            if char_info then
+                return i + 1
+            end
+        end
+    else
+        local opening_idx = utils.find_opening(info, line, col - 1)
+        if opening_idx then
+            local l, r = opening_idx, col - 1
+            local last
+
+            for i = r, l, -1 do
+                char = line:sub(i, i)
+                local char_info = utils.get_pair(char)
+
+                if char_info and char == char_info.close then
+                    last = last or i
+                    if utils.valid_pair_rev(char_info, line, l, i - 1) then
+                        return i + 1
+                    end
+                end
+            end
+
+            return opening_idx and (opening_idx + 1) or last
+        end
+    end
+end
+
+---@param pair ntab.pair
+---@param line string
+---@param col integer
+function utils.find_prev_closing(pair, line, col)
+    local char = line:sub(col, col)
+
+    local i
+    local before_cursor = line:sub(1, col - 1)
+    local idx = before_cursor:reverse():find(pair.open, 1, true)
+
+    if pair.open == pair.close then
+        i = idx and (col - idx)
+    elseif char ~= pair.open then
+        i = utils.find_opening(pair, line, col - 1) or idx and (col - idx)
+    end
+
+    return i and (i + 1) or utils.find_prev_nested(pair, line, col)
+end
+
+---@param pair ntab.pair
+---@param line string
+---@param col integer
+---@param behavior ntab.behavior
+---
+---@return ntab.md | nil
+function utils.find_prev(pair, line, col, behavior)
+    local i
+
+    if behavior == "closing" then
+        i = utils.find_prev_closing(pair, line, col)
+    else
+        i = utils.find_prev_nested(pair, line, col)
+    end
+
+    if i then
+        local prev = {
+            pos = i,
+            char = line:sub(i, i),
+        }
+
+        local next = {
+            pos = col + 1,
+            char = line:sub(col, col),
+        }
+
+        return {
+            prev = prev,
+            next = next,
+            pos = math.min(col - 1, i),
         }
     end
 end
