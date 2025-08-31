@@ -10,6 +10,8 @@
 ---| "nested"
 ---| "closing"
 
+---@alias ntab.escaped_pos nil | [integer, integer]
+
 ---@class ntab.md
 ---@field prev ntab.info
 ---@field next ntab.info

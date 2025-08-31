@@ -2,6 +2,7 @@ local tab = require("neotab.tab")
 local utils = require("neotab.utils")
 local log = require("neotab.logger")
 local config = require("neotab.config").user.smart_punctuators
+local escape = require("neotab.escape")
 local api = vim.api
 
 ---@class ntab.punctuators
@@ -56,6 +57,7 @@ end
 
 ---@param punc string
 ---@param trigger ntab.trigger
+---@return ntab.escaped_pos
 function punctuators.escape(punc, trigger)
     local pos = api.nvim_win_get_cursor(0)
     local char = utils.adj_char(0, pos)
@@ -86,11 +88,17 @@ function punctuators.escape(punc, trigger)
         return
     end
 
+    -- Create an undopoint
+    vim.cmd("let &undolevels = &undolevels")
     utils.move_cursor(1, 0, pos)
     vim.v.char = punc
+
+    return pos
 end
 
 function punctuators.handle()
+    escape.reset_escape()
+
     local punc, ft = vim.v.char, vim.bo.ft
     local trigger = config.escape.triggers[punc]
 
@@ -102,7 +110,8 @@ function punctuators.handle()
 
     if config.escape.enabled and trigger then
         if not trigger.ft or vim.tbl_contains(trigger.ft, ft) then
-            punctuators.escape(punc, trigger)
+            local has_escaped = punctuators.escape(punc, trigger)
+            escape.set_has_escaped(has_escaped)
         end
     end
 end

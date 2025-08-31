@@ -1,6 +1,7 @@
 local utils = require("neotab.utils")
 local log = require("neotab.logger")
 local config = require("neotab.config")
+local escape = require("neotab.escape")
 
 ---@class ntab.tab
 local tab = {}
@@ -11,6 +12,7 @@ local tab = {}
 ---
 ---@return ntab.md | nil
 function tab.out(lines, pos, opts)
+    escape.revert_last_escape()
     opts = vim.tbl_extend("force", {
         ignore_beginning = false,
         behavior = config.user.behavior,
