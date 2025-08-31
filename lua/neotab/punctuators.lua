@@ -70,6 +70,7 @@ function punctuators.escape(punc, trigger)
         return
     end
 
+    local original_punc = punc
     punc = (trigger.format or "%s"):format(punc)
     local line = vim.api.nvim_get_current_line()
 
@@ -89,11 +90,10 @@ function punctuators.escape(punc, trigger)
     end
 
     -- Create an undopoint
-    vim.cmd("let &undolevels = &undolevels")
     utils.move_cursor(1, 0, pos)
     vim.v.char = punc
 
-    return pos
+    return { pos = pos, punc = punc, char = original_punc }
 end
 
 function punctuators.handle()
